@@ -33,8 +33,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* LookAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* InteractAction;
+
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	void Interact();
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	USceneComponent* HandComponent;
+
+	UPROPERTY(EditAnywhere)
+	UCameraComponent* PlayerCamera;
+
+	UPROPERTY(EditAnywhere);
+	float InteractLineTraceDistance = 1000;
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -42,8 +56,9 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	AActor* objectHeld;
+
 private:
-	UPROPERTY(EditAnywhere)
-	UCameraComponent* PlayerCamera;
+	
 
 };

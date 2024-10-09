@@ -7,6 +7,8 @@
 #include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Items/Item.h"
+#include "Items/UInteractableInterface.h"
 
 // Sets default values
 AEthanCharacter::AEthanCharacter()
@@ -17,6 +19,9 @@ AEthanCharacter::AEthanCharacter()
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Camera"));
 	PlayerCamera->SetupAttachment(RootComponent);
 	PlayerCamera->bUsePawnControlRotation = true;
+
+	HandComponent = CreateDefaultSubobject<USceneComponent>(TEXT("HandComponent"));
+	HandComponent->SetupAttachment(PlayerCamera);
 
 }
 
@@ -57,6 +62,39 @@ void AEthanCharacter::Look(const FInputActionValue& Value)
 	AddControllerYawInput(LookAxisVector.X);
 }
 
+void AEthanCharacter::Interact()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+		FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
+
+		FCollisionQueryParams TraceParams;
+		TraceParams.AddIgnoredActor(this);
+
+		FHitResult Hit;
+		bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
+
+		if (bHit)
+		{
+			AActor* HitActor = Hit.GetActor();
+			if (HitActor && HitActor->Implements<UInteractableInterface>())
+			{
+				// Call the Interact function on the hit actor
+				IInteractableInterface::Execute_Interact(HitActor, this);
+			}
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s is not a valid interactable object"), Hit.GetActor());
+		}
+	}
+}
+
 // Called every frame
 void AEthanCharacter::Tick(float DeltaTime)
 {
@@ -73,6 +111,17 @@ void AEthanCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	{
 		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &AEthanCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AEthanCharacter::Look);
+		/*EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AEthanCharacter::Interact);*/
+		// Bind interact action with a log to check if InteractAction is valid
+		if (InteractAction)
+		{
+			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AEthanCharacter::Interact);
+			UE_LOG(LogTemp, Warning, TEXT("InteractAction bound successfully"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("InteractAction is NULL! Make sure it's assigned."));
+		}
 	}
 
 }
