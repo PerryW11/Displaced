@@ -40,8 +40,7 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Interact();
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
-	USceneComponent* HandComponent;
+	
 
 	UPROPERTY(EditAnywhere)
 	UCameraComponent* PlayerCamera;
@@ -56,7 +55,11 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	AActor* objectHeld;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	USceneComponent* HandComponent;
+	
+	// Variable to store the currently held item
+	AActor* CurrentlyHeldItem;
 
 private:
 	

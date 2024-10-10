@@ -7,7 +7,6 @@
 #include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "Items/Item.h"
 #include "Items/UInteractableInterface.h"
 
 // Sets default values
@@ -64,36 +63,86 @@ void AEthanCharacter::Look(const FInputActionValue& Value)
 
 void AEthanCharacter::Interact()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
-	{
-		FVector CameraLocation;
-		FRotator CameraRotation;
-		PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+    UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
 
-		FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
+    // Check if the player is holding an item
+    if (CurrentlyHeldItem)
+    {
+        // Drop the item
+        UE_LOG(LogTemp, Warning, TEXT("Dropping held item: %s"), *CurrentlyHeldItem->GetName());
 
-		FCollisionQueryParams TraceParams;
-		TraceParams.AddIgnoredActor(this);
+        // Detach the item from the player and keep its current world transform
+        CurrentlyHeldItem->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-		FHitResult Hit;
-		bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
+        // Re-enable physics and collision for the dropped item
+        if (UStaticMeshComponent* ItemMesh = CurrentlyHeldItem->FindComponentByClass<UStaticMeshComponent>())
+        {
+            // Ensure physics and gravity are enabled
+            ItemMesh->SetSimulatePhysics(true);
+            ItemMesh->SetEnableGravity(true);
+            ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
-		if (bHit)
-		{
-			AActor* HitActor = Hit.GetActor();
-			if (HitActor && HitActor->Implements<UInteractableInterface>())
-			{
-				// Call the Interact function on the hit actor
-				IInteractableInterface::Execute_Interact(HitActor, this);
-			}
-		} else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("%s is not a valid interactable object"), Hit.GetActor());
-		}
-	}
+            // Optionally, apply a small force to make the item "drop" more naturally
+            FVector DropImpulse = PlayerCamera->GetForwardVector() * 200.0f;  // Adjust force as needed
+            ItemMesh->AddImpulse(DropImpulse);
+        }
+
+        // Clear the reference to the held item
+        CurrentlyHeldItem = nullptr;
+    }
+    else
+    {
+        // Perform the line trace to interact with objects
+        APlayerController* PlayerController = Cast<APlayerController>(GetController());
+        if (PlayerController)
+        {
+            FVector CameraLocation;
+            FRotator CameraRotation;
+            PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+            FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
+
+            // Draw debug line to visualize the line trace
+            DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
+
+            FCollisionQueryParams TraceParams;
+            TraceParams.AddIgnoredActor(this);
+
+            FHitResult Hit;
+            bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
+
+            if (bHit)
+            {
+                AActor* HitActor = Hit.GetActor();
+                if (HitActor && HitActor->Implements<UInteractableInterface>())
+                {
+                    // Call the Interact function on the hit actor
+                    IInteractableInterface::Execute_Interact(HitActor, this);
+
+                    // If the hit actor has a StaticMeshComponent, treat it as the item
+                    if (UStaticMeshComponent* ItemMesh = HitActor->FindComponentByClass<UStaticMeshComponent>())
+                    {
+                        CurrentlyHeldItem = HitActor;
+                        UE_LOG(LogTemp, Warning, TEXT("Picking up item: %s"), *HitActor->GetName());
+
+                        // Attach the item to the HandComponent
+                        CurrentlyHeldItem->AttachToComponent(HandComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+                        // Disable physics and collision while holding the item
+                        ItemMesh->SetSimulatePhysics(false);
+                        ItemMesh->SetEnableGravity(false);
+                        ItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                    }
+                }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("No valid interactable object hit"));
+            }
+        }
+    }
 }
+
 
 // Called every frame
 void AEthanCharacter::Tick(float DeltaTime)

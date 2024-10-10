@@ -1,6 +1,7 @@
 #include "Items/Item.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Ethan/EthanCharacter.h"
 #include "Kismet/GameplayStatics.h"
 
 AItem::AItem()
@@ -22,7 +23,6 @@ void AItem::Interact_Implementation(AActor* Interactor)
 {
     if (!bIsPickedUp)
     {
-        // Picking up logic
         UE_LOG(LogTemp, Warning, TEXT("Item picked up, spawning new item"));
 
         AItem* OriginalItem = this;
@@ -45,24 +45,34 @@ void AItem::Interact_Implementation(AActor* Interactor)
                 // Set the item's owner to the player character
                 NewItem->SetOwner(Interactor);
 
-                // Disable physics before attaching
+                // Disable physics and reset velocities before attaching
                 if (NewItem->itemMesh)
                 {
                     NewItem->itemMesh->SetSimulatePhysics(false);
                     NewItem->itemMesh->SetEnableGravity(false);
+                    NewItem->itemMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);  // Reset velocity
+                    NewItem->itemMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);  // Reset angular velocity
                 }
 
-                // Attach the item to the player's hand component
-                USceneComponent* HandComponent = Cast<USceneComponent>(Interactor->GetComponentByClass(USceneComponent::StaticClass()));
-                if (HandComponent)
+                // Cast Interactor to your character class
+                AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
+                if (EthanCharacter && EthanCharacter->HandComponent)
                 {
-                    // Attach the new item to the player's hand
-                    NewItem->AttachToComponent(HandComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+                    // Log the name of the component to ensure it's the HandComponent
+                    UE_LOG(LogTemp, Warning, TEXT("Attaching to HandComponent: %s"), *EthanCharacter->HandComponent->GetName());
 
-                    // Explicitly set the location after attachment
-                    NewItem->SetActorLocation(HandComponent->GetComponentLocation());
+                    // Attach the new item to the player's HandComponent
+                    NewItem->AttachToComponent(EthanCharacter->HandComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
-                    UE_LOG(LogTemp, Warning, TEXT("New item successfully spawned and attached to player hand at location: %s"), *NewItem->GetActorLocation().ToString());
+                    // Reset the item's relative location, scale, and rotation
+                    NewItem->SetActorRelativeLocation(FVector::ZeroVector);
+                    NewItem->SetActorRelativeRotation(FRotator::ZeroRotator);
+
+                    UE_LOG(LogTemp, Warning, TEXT("New item successfully spawned and attached to HandComponent"));
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Error, TEXT("HandComponent not found on EthanCharacter!"));
                 }
 
                 // Now that the new item is attached, destroy the original item
@@ -103,7 +113,6 @@ void AItem::Interact_Implementation(AActor* Interactor)
         }
     }
 }
-
 
 
 void AItem::BeginPlay()
