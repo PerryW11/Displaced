@@ -22,19 +22,36 @@ AItem::AItem()
 
 void AItem::Interact_Implementation(AActor* Interactor)
 {
-    if (!bIsPickedUp)
+    AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
+    if(EthanCharacter)
     {
-        Pickup(Interactor);
-    }
-    else
+        if(!EthanCharacter->CurrentlyHeldItem)
+        {
+            Pickup(EthanCharacter);
+        } else if (EthanCharacter->CurrentlyHeldItem)
+        {
+            if(bIsPickedUp)
+            {
+                Drop(EthanCharacter);
+            } else
+            {
+                UE_LOG(LogTemp, Error, TEXT("EthanCharacter is already holding an item"));
+            }
+        } 
+        
+    } else
     {
-        Drop(Interactor);
+        UE_LOG(LogTemp, Error, TEXT("EthanCharacter pointer is null"));
     }
 }
 
-void AItem::Pickup(AActor* Interactor)
+bool AItem::BIsHeldItem_Implementation()
 {
-    AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
+    return bIsPickedUp;
+}
+
+void AItem::Pickup(AEthanCharacter* EthanCharacter)
+{
     if (EthanCharacter && EthanCharacter->HandComponent)
     {
         UE_LOG(LogTemp, Warning, TEXT("Ethan and HandComponent are valid"));
@@ -51,7 +68,7 @@ void AItem::Pickup(AActor* Interactor)
         }
 
         bIsPickedUp = true;
-        UE_LOG(LogTemp, Warning, TEXT("Item picked up by: %s"), *Interactor->GetName());
+        UE_LOG(LogTemp, Warning, TEXT("Item picked up by: %s"), *EthanCharacter->GetName());
     }
     else
     {
@@ -60,7 +77,7 @@ void AItem::Pickup(AActor* Interactor)
 }
 
 
-void AItem::Drop(AActor* Interactor)
+void AItem::Drop(AEthanCharacter* EthanCharacter)
 {
     // Detach the item from the player's hand
     DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -72,8 +89,7 @@ void AItem::Drop(AActor* Interactor)
         itemMesh->SetEnableGravity(true);
         itemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     }
-
-    AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
+    
     UCameraComponent* PlayerCamera = EthanCharacter->GetPlayerCamera();
     if(EthanCharacter && PlayerCamera)
     itemMesh->AddImpulse(PlayerCamera->GetForwardVector() * 2000);

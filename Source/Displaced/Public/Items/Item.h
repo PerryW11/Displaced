@@ -9,6 +9,7 @@
 
 class USphereComponent;
 class USceneComponent;
+class AEthanCharacter;
 
 UCLASS()
 class DISPLACED_API AItem : public AActor, public IInteractableInterface
@@ -44,8 +45,10 @@ public:
 	// Implement Interact_PickUp from the interface
 	virtual void Interact_Implementation(AActor* Interactor) override;
 
-	void Drop(AActor* Interactor);
+	virtual bool BIsHeldItem_Implementation() override;
 
-	void Pickup(AActor* Interactor);
+	void Drop(AEthanCharacter* EthanCharacter);
+
+	void Pickup(AEthanCharacter* EthanCharacter);
 
 };

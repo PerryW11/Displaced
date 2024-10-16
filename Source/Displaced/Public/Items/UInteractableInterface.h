@@ -17,4 +17,12 @@ class DISPLACED_API IInteractableInterface
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	void Interact(AActor* Interactor);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
+	bool BIsHeldItem();
+
+	virtual bool BIsHeldItem_Implementation()
+	{
+		return false;
+	}
 };

@@ -65,51 +65,81 @@ void AEthanCharacter::Look(const FInputActionValue& Value)
 void AEthanCharacter::Interact()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
+	
+	// Perform a line trace to check for interactable objects
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-	// If currently holding an item, interact with it
-	if (CurrentlyHeldItem)
-	{
-		// Use the interface to drop the currently held item
-		IInteractableInterface::Execute_Interact(CurrentlyHeldItem, this);
-		CurrentlyHeldItem = nullptr;  // Clear reference after dropping
-		UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
-	}
-	else
-	{
-		// Perform a line trace to check for interactable objects
-		APlayerController* PlayerController = Cast<APlayerController>(GetController());
-		if (PlayerController)
+		FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
+
+		DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
+
+		FCollisionQueryParams TraceParams;
+		TraceParams.AddIgnoredActor(this);
+
+		FHitResult Hit;
+		bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
+
+		if (bHit)
 		{
-			FVector CameraLocation;
-			FRotator CameraRotation;
-			PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
-
-			FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
-
-			DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
-
-			FCollisionQueryParams TraceParams;
-			TraceParams.AddIgnoredActor(this);
-
-			FHitResult Hit;
-			bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
-
-			if (bHit)
+			AActor* HitActor = Hit.GetActor();
+			if (HitActor && HitActor->Implements<UInteractableInterface>())
 			{
-				AActor* HitActor = Hit.GetActor();
-				if (HitActor && HitActor->Implements<UInteractableInterface>())
+				UE_LOG(LogTemp, Warning, TEXT("Object is interactable: %s"), *HitActor->GetName());
+				// Interact with the item using the interface
+				IInteractableInterface::Execute_Interact(HitActor, this);
+				for (auto Tag : HitActor->Tags)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Object is interactable: %s"), *HitActor->GetName());
-					// Interact with the item using the interface
-					IInteractableInterface::Execute_Interact(HitActor, this);
-					CurrentlyHeldItem = HitActor;  // Update the reference to the held item
-					UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *HitActor->GetName());
+					UE_LOG(LogTemp, Warning, TEXT("Actor has tag: %s"), *Tag.ToString());
+				}
+				//Need to check if Item before 
+				if(HitActor->ActorHasTag(FName("Item")))
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Object has item tag"));
+					if(IInteractableInterface::Execute_BIsHeldItem(HitActor))
+					{
+						CurrentlyHeldItem = HitActor;  // Update the reference to the held item
+						UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *HitActor->GetName());
+					} else
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Item can't be picked up: %s"), *HitActor->GetName());
+					}
+					
+				} else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Not an item but interacted with: %s"), *HitActor->GetName());	
+				}
+				
+				
+			} else
+			{
+				if (CurrentlyHeldItem)
+				{
+					// Use the interface to drop the currently held item
+					IInteractableInterface::Execute_Interact(CurrentlyHeldItem, this);
+					CurrentlyHeldItem = nullptr;  // Clear reference after dropping
+					UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
 				}
 			}
-			else
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No valid interactable object hit"));
+			if (CurrentlyHeldItem)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("No valid interactable object hit"));
+				// Use the interface to drop the currently held item
+				IInteractableInterface::Execute_Interact(CurrentlyHeldItem, this);
+				CurrentlyHeldItem = nullptr;  // Clear reference after dropping
+				UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
+			} else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Since interact was called and no valid interactable, dropping item"));
 			}
+			
 		}
 	}
 }
