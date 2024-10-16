@@ -44,4 +44,8 @@ public:
 	// Implement Interact_PickUp from the interface
 	virtual void Interact_Implementation(AActor* Interactor) override;
 
+	void Drop(AActor* Interactor);
+
+	void Pickup(AActor* Interactor);
+
 };

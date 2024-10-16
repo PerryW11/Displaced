@@ -10,6 +10,7 @@
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class USphereComponent;
 
 UCLASS()
 class DISPLACED_API AEthanCharacter : public ACharacter
@@ -39,8 +40,6 @@ protected:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void Interact();
-	
-	
 
 	UPROPERTY(EditAnywhere)
 	UCameraComponent* PlayerCamera;
@@ -55,11 +54,13 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
-	USceneComponent* HandComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USphereComponent* HandComponent;
 	
 	// Variable to store the currently held item
 	AActor* CurrentlyHeldItem;
+
+	UCameraComponent* GetPlayerCamera();
 
 private:
 	

@@ -7,6 +7,7 @@
 #include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Components/SphereComponent.h"
 #include "Items/UInteractableInterface.h"
 
 // Sets default values
@@ -19,7 +20,7 @@ AEthanCharacter::AEthanCharacter()
 	PlayerCamera->SetupAttachment(RootComponent);
 	PlayerCamera->bUsePawnControlRotation = true;
 
-	HandComponent = CreateDefaultSubobject<USceneComponent>(TEXT("HandComponent"));
+	HandComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Hand"));
 	HandComponent->SetupAttachment(PlayerCamera);
 
 }
@@ -63,86 +64,55 @@ void AEthanCharacter::Look(const FInputActionValue& Value)
 
 void AEthanCharacter::Interact()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
+	UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
 
-    // Check if the player is holding an item
-    if (CurrentlyHeldItem)
-    {
-        // Drop the item
-        UE_LOG(LogTemp, Warning, TEXT("Dropping held item: %s"), *CurrentlyHeldItem->GetName());
+	// If currently holding an item, interact with it
+	if (CurrentlyHeldItem)
+	{
+		// Use the interface to drop the currently held item
+		IInteractableInterface::Execute_Interact(CurrentlyHeldItem, this);
+		CurrentlyHeldItem = nullptr;  // Clear reference after dropping
+		UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
+	}
+	else
+	{
+		// Perform a line trace to check for interactable objects
+		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		if (PlayerController)
+		{
+			FVector CameraLocation;
+			FRotator CameraRotation;
+			PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-        // Detach the item from the player and keep its current world transform
-        CurrentlyHeldItem->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
 
-        // Re-enable physics and collision for the dropped item
-        if (UStaticMeshComponent* ItemMesh = CurrentlyHeldItem->FindComponentByClass<UStaticMeshComponent>())
-        {
-            // Ensure physics and gravity are enabled
-            ItemMesh->SetSimulatePhysics(true);
-            ItemMesh->SetEnableGravity(true);
-            ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
 
-            // Optionally, apply a small force to make the item "drop" more naturally
-            FVector DropImpulse = PlayerCamera->GetForwardVector() * 200.0f;  // Adjust force as needed
-            ItemMesh->AddImpulse(DropImpulse);
-        }
+			FCollisionQueryParams TraceParams;
+			TraceParams.AddIgnoredActor(this);
 
-        // Clear the reference to the held item
-        CurrentlyHeldItem = nullptr;
-    }
-    else
-    {
-        // Perform the line trace to interact with objects
-        APlayerController* PlayerController = Cast<APlayerController>(GetController());
-        if (PlayerController)
-        {
-            FVector CameraLocation;
-            FRotator CameraRotation;
-            PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+			FHitResult Hit;
+			bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
 
-            FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
-
-            // Draw debug line to visualize the line trace
-            DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
-
-            FCollisionQueryParams TraceParams;
-            TraceParams.AddIgnoredActor(this);
-
-            FHitResult Hit;
-            bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
-
-            if (bHit)
-            {
-                AActor* HitActor = Hit.GetActor();
-                if (HitActor && HitActor->Implements<UInteractableInterface>())
-                {
-                    // Call the Interact function on the hit actor
-                    IInteractableInterface::Execute_Interact(HitActor, this);
-
-                    // If the hit actor has a StaticMeshComponent, treat it as the item
-                    if (UStaticMeshComponent* ItemMesh = HitActor->FindComponentByClass<UStaticMeshComponent>())
-                    {
-                        CurrentlyHeldItem = HitActor;
-                        UE_LOG(LogTemp, Warning, TEXT("Picking up item: %s"), *HitActor->GetName());
-
-                        // Attach the item to the HandComponent
-                        CurrentlyHeldItem->AttachToComponent(HandComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
-                        // Disable physics and collision while holding the item
-                        ItemMesh->SetSimulatePhysics(false);
-                        ItemMesh->SetEnableGravity(false);
-                        ItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-                    }
-                }
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("No valid interactable object hit"));
-            }
-        }
-    }
+			if (bHit)
+			{
+				AActor* HitActor = Hit.GetActor();
+				if (HitActor && HitActor->Implements<UInteractableInterface>())
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Object is interactable: %s"), *HitActor->GetName());
+					// Interact with the item using the interface
+					IInteractableInterface::Execute_Interact(HitActor, this);
+					CurrentlyHeldItem = HitActor;  // Update the reference to the held item
+					UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *HitActor->GetName());
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("No valid interactable object hit"));
+			}
+		}
+	}
 }
-
 
 // Called every frame
 void AEthanCharacter::Tick(float DeltaTime)
@@ -173,5 +143,10 @@ void AEthanCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		}
 	}
 
+}
+
+UCameraComponent* AEthanCharacter::GetPlayerCamera()
+{
+	return PlayerCamera;
 }
 
