@@ -4,10 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Items/UInteractableInterface.h"
 #include "NPC.generated.h"
 
+class UDialogueWidget;
+class ADialogueManager;
+
 UCLASS()
-class DISPLACED_API ANPC : public ACharacter
+class DISPLACED_API ANPC : public ACharacter, public IInteractableInterface
 {
 	GENERATED_BODY()
 
@@ -23,7 +27,20 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void Interact_Implementation(AActor* Interactor) override;
 
+	// Reference to the Dialogue Widget class to spawn
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UDialogueWidget> DialogueWidgetClass;
+
+	// Reference to the Dialogue Manager that manages the NPC's dialogue
+	/**
+	 * 
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
+	ADialogueManager* DialogueManager;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText CharacterName; 
+	
 };

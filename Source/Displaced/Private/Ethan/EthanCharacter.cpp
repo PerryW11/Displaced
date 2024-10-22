@@ -137,7 +137,7 @@ void AEthanCharacter::Interact()
 				UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
 			} else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Since interact was called and no valid interactable, dropping item"));
+				UE_LOG(LogTemp, Warning, TEXT("No item to drop and nothing to interact with"));
 			}
 			
 		}
