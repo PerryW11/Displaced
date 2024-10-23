@@ -5,6 +5,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Ethan/EthanCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/Dialogue/DialogueWidget.h"
 #include "UI/Dialogue/DialogueManager.h"
 
@@ -38,6 +39,14 @@ void ANPC::Interact_Implementation(AActor* Interactor)
 		APlayerController* PlayerController = Cast<APlayerController>(EthanCharacter->GetController());
 		if (PlayerController && DialogueWidgetClass)
 		{
+			// Find the DialogueManager dynamically from the world
+			ADialogueManager* DialogueManager = Cast<ADialogueManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADialogueManager::StaticClass()));
+			if (!DialogueManager)
+			{
+				UE_LOG(LogTemp, Error, TEXT("DialogueManager not found in the world."));
+				return;
+			}
+			
 			UDialogueWidget* DialogueWidget = CreateWidget<UDialogueWidget>(PlayerController, DialogueWidgetClass);
 			if (DialogueWidget)
 			{

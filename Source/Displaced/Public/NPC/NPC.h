@@ -33,13 +33,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UDialogueWidget> DialogueWidgetClass;
 
-	// Reference to the Dialogue Manager that manages the NPC's dialogue
-	/**
-	 * 
-	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
-	ADialogueManager* DialogueManager;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText CharacterName; 
 	
