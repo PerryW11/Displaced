@@ -12,6 +12,14 @@ class UInputMappingContext;
 class UInputAction;
 class USphereComponent;
 
+UENUM(BlueprintType)
+enum class EPlayerMode : uint8
+{
+	Normal,
+	Dialogue
+};
+
+
 UCLASS()
 class DISPLACED_API AEthanCharacter : public ACharacter
 {
@@ -25,6 +33,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	//Base Gameplay Input
+	
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputMappingContext* EthanContext;
 
@@ -41,11 +51,37 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Interact();
 
+	//Dialogue Gameplay Input
+	
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputMappingContext* DialogueContext;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* DialogueLookAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* DialogueInteractAction;
+
+	void DialogueLook(const FInputActionValue& Value);
+	void DialogueInteract();
+
+	FVector DialogueLookLocation;
+	FRotator DialogueLookDirection;
+	float MaxLookAngle;
+
 	UPROPERTY(EditAnywhere)
 	UCameraComponent* PlayerCamera;
 
 	UPROPERTY(EditAnywhere);
 	float InteractLineTraceDistance = 1000;
+
+	void InterpolateCameraToTarget(float DeltaTime);
+	void EndDialogue();
+
+	UFUNCTION()
+	void DialogueMove(const FInputActionValue& Value);
+	
+	FVector2D LastLookInput;
 	
 public:	
 	// Called every frame
@@ -60,7 +96,11 @@ public:
 	// Variable to store the currently held item
 	AActor* CurrentlyHeldItem;
 
+	EPlayerMode CurrentPlayerMode; 
+
 	UCameraComponent* GetPlayerCamera();
+
+	bool bIsInterpolatingCamera;
 
 private:
 	

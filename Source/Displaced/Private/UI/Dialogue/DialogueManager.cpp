@@ -40,9 +40,10 @@ void ADialogueManager::LoadDialogueData()
 
 void ADialogueManager::AdvanceDialogue(int32 NextIndex)
 {
+	UE_LOG(LogTemp, Warning, TEXT("At dialogue index: %d"), NextIndex);
 	if (DialogueNodes.IsValidIndex(NextIndex))
 	{
-		CurrentDialogueIndex = NextIndex;
 		OnDialogueUpdated.Broadcast(DialogueNodes[CurrentDialogueIndex]);
+		CurrentDialogueIndex++;
 	}
 }

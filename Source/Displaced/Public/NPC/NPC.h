@@ -9,6 +9,7 @@
 
 class UDialogueWidget;
 class ADialogueManager;
+class USphereComponent;
 
 UCLASS()
 class DISPLACED_API ANPC : public ACharacter, public IInteractableInterface
@@ -34,6 +35,11 @@ public:
 	TSubclassOf<UDialogueWidget> DialogueWidgetClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText CharacterName; 
+	FText CharacterName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USphereComponent* Head;
+	
+	FVector HeadLoc;
 	
 };

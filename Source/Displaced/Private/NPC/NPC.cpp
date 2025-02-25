@@ -8,13 +8,15 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/Dialogue/DialogueWidget.h"
 #include "UI/Dialogue/DialogueManager.h"
+#include "Components/SphereComponent.h"
 
 // Sets default values
 ANPC::ANPC()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
+	Head = CreateDefaultSubobject<USphereComponent>(TEXT("Head"));
+	Head->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -36,6 +38,11 @@ void ANPC::Interact_Implementation(AActor* Interactor)
 	AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
 	if (EthanCharacter)
 	{
+		if(EthanCharacter->CurrentPlayerMode == EPlayerMode::Dialogue)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Player already in dialogue mode, letting player handle dialogue advancement"));
+			return;
+		}
 		APlayerController* PlayerController = Cast<APlayerController>(EthanCharacter->GetController());
 		if (PlayerController && DialogueWidgetClass)
 		{
@@ -57,7 +64,7 @@ void ANPC::Interact_Implementation(AActor* Interactor)
 					DialogueWidget->InitializeDialogueWidget(DialogueManager);
 				}
 				
-				DialogueManager->AdvanceDialogue(0); 
+				DialogueManager->AdvanceDialogue(DialogueManager->CurrentDialogueIndex); 
 			}
 		}
 	}

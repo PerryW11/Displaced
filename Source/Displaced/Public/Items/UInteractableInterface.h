@@ -25,4 +25,13 @@ public:
 	{
 		return false;
 	}
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
+	FVector ReturnFocalPoint();
+
+	virtual FVector ReturnFocalPoint_Implementation()
+	{
+		FVector vector(0,0,0);
+		return vector; 
+	}
 };
