@@ -38,33 +38,37 @@ void ANPC::Interact_Implementation(AActor* Interactor)
 	AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
 	if (EthanCharacter)
 	{
-		if(EthanCharacter->CurrentPlayerMode == EPlayerMode::Dialogue)
+		if (EthanCharacter->CurrentPlayerMode == EPlayerMode::Dialogue)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Player already in dialogue mode, letting player handle dialogue advancement"));
 			return;
 		}
+
 		APlayerController* PlayerController = Cast<APlayerController>(EthanCharacter->GetController());
 		if (PlayerController && DialogueWidgetClass)
 		{
-			// Find the DialogueManager dynamically from the world
 			ADialogueManager* DialogueManager = Cast<ADialogueManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADialogueManager::StaticClass()));
 			if (!DialogueManager)
 			{
 				UE_LOG(LogTemp, Error, TEXT("DialogueManager not found in the world."));
 				return;
 			}
-			
+
+			// Check if the conversation has already been completed
+			FString ConversationID = "test"; // Replace with dynamic logic if needed
+			if (DialogueManager->HasConversationBeenCompleted(ConversationID))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Conversation %s already completed, interaction blocked"), *ConversationID);
+				return;
+			}
+
 			UDialogueWidget* DialogueWidget = CreateWidget<UDialogueWidget>(PlayerController, DialogueWidgetClass);
 			if (DialogueWidget)
 			{
 				DialogueWidget->AddToViewport();
-				
-				if (DialogueManager)
-				{
-					DialogueWidget->InitializeDialogueWidget(DialogueManager);
-				}
-				
-				DialogueManager->AdvanceDialogue(DialogueManager->CurrentDialogueIndex); 
+				DialogueWidget->InitializeDialogueWidget(DialogueManager);
+				DialogueManager->ActiveDialogueWidget = DialogueWidget;
+				DialogueManager->StartConversation(ConversationID);
 			}
 		}
 	}

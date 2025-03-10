@@ -26,12 +26,29 @@ public:
 	
 	UPROPERTY(BlueprintReadWrite)
 	int32 CurrentDialogueIndex;
+
+	UPROPERTY(BlueprintReadWrite)
+	FString CurrentConversationID;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnDialogueUpdated OnDialogueUpdated;
 	
 	UFUNCTION(BlueprintCallable)
 	void AdvanceDialogue(int32 NextIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void StartConversation(const FString& NewConversationID);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	bool IsConversationFinished() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	bool HasConversationBeenCompleted(const FString& ConversationID) const;
+
+	class UDialogueWidget* ActiveDialogueWidget;
+
+	UPROPERTY()
+	TSet<FString> CompletedConversations;
 
 protected:
 	virtual void BeginPlay() override;

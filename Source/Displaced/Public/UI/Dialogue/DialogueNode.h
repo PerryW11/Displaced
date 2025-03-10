@@ -18,5 +18,8 @@ struct FDialogueNode : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText CharacterName; // The owner of the dialogue story-wise
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ConversationID;
 	
 };
