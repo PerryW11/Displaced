@@ -1,5 +1,4 @@
 #include "Items/Item.h"
-
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
@@ -9,37 +8,35 @@ AItem::AItem()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // Initialize static mesh component for the item
     itemMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ItemMesh"));
     RootComponent = itemMesh;
 
-    // Initialize sphere trigger for interaction
     sphereTrigger = CreateDefaultSubobject<USphereComponent>(TEXT("SphereTrigger"));
     sphereTrigger->SetupAttachment(itemMesh);
 
     bIsPickedUp = false;
+    OriginalScale = FVector(1.f, 1.f, 1.f); // Default, overridden in BeginPlay
 }
 
 void AItem::Interact_Implementation(AActor* Interactor)
 {
     AEthanCharacter* EthanCharacter = Cast<AEthanCharacter>(Interactor);
-    if(EthanCharacter)
+    if (EthanCharacter)
     {
-        if(!EthanCharacter->CurrentlyHeldItem)
+        if (!EthanCharacter->CurrentlyHeldItem)
         {
             Pickup(EthanCharacter);
-        } else if (EthanCharacter->CurrentlyHeldItem)
+        }
+        else if (EthanCharacter->CurrentlyHeldItem == this)
         {
-            if(bIsPickedUp)
-            {
-                Drop(EthanCharacter);
-            } else
-            {
-                UE_LOG(LogTemp, Error, TEXT("EthanCharacter is already holding an item"));
-            }
-        } 
-        
-    } else
+            Drop(EthanCharacter);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("EthanCharacter is already holding another item"));
+        }
+    }
+    else
     {
         UE_LOG(LogTemp, Error, TEXT("EthanCharacter pointer is null"));
     }
@@ -55,10 +52,37 @@ void AItem::Pickup(AEthanCharacter* EthanCharacter)
     if (EthanCharacter && EthanCharacter->HandComponent)
     {
         UE_LOG(LogTemp, Warning, TEXT("Ethan and HandComponent are valid"));
-        // Attach the item to the player's HandComponent
-        AttachToComponent(EthanCharacter->HandComponent, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
 
-        // Disable physics and collision while holding the item
+        // Log initial scale
+        FVector CurrentScale = GetActorScale3D();
+        UE_LOG(LogTemp, Warning, TEXT("Current item scale: %s"), *CurrentScale.ToString());
+
+        // Attach the item to the HandComponent
+        AttachToComponent(EthanCharacter->HandComponent, 
+            FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), 
+            NAME_None);
+
+        // Log scale after attachment
+        FVector PostAttachScale = GetActorScale3D();
+        UE_LOG(LogTemp, Warning, TEXT("Scale after attachment: %s"), *PostAttachScale.ToString());
+
+        // Calculate required relative scale to maintain OriginalScale
+        FVector ParentScale = EthanCharacter->HandComponent->GetComponentScale();
+        UE_LOG(LogTemp, Warning, TEXT("HandComponent scale: %s"), *ParentScale.ToString());
+        FVector RelativeScale = OriginalScale / ParentScale; // Element-wise division
+
+        // Set the relative transform
+        FTransform AttachTransform;
+        AttachTransform.SetLocation(PickupOffset);
+        AttachTransform.SetRotation(PickupRotation.Quaternion());
+        AttachTransform.SetScale3D(RelativeScale);
+        SetActorRelativeTransform(AttachTransform);
+
+        // Log final scale
+        FVector FinalScale = GetActorScale3D();
+        UE_LOG(LogTemp, Warning, TEXT("Scale after transform: %s"), *FinalScale.ToString());
+
+        // Disable physics and collision
         if (itemMesh)
         {
             UE_LOG(LogTemp, Warning, TEXT("Item mesh is valid, disabling physics"));
@@ -68,6 +92,8 @@ void AItem::Pickup(AEthanCharacter* EthanCharacter)
         }
 
         bIsPickedUp = true;
+        Holder = EthanCharacter;
+        EthanCharacter->CurrentlyHeldItem = this;
         UE_LOG(LogTemp, Warning, TEXT("Item picked up by: %s"), *EthanCharacter->GetName());
     }
     else
@@ -76,32 +102,35 @@ void AItem::Pickup(AEthanCharacter* EthanCharacter)
     }
 }
 
-
 void AItem::Drop(AEthanCharacter* EthanCharacter)
 {
-    // Detach the item from the player's hand
     DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-    // Re-enable physics so the item interacts with the world after being dropped
     if (itemMesh)
     {
         itemMesh->SetSimulatePhysics(true);
         itemMesh->SetEnableGravity(true);
         itemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     }
-    
-    UCameraComponent* PlayerCamera = EthanCharacter->GetPlayerCamera();
-    if(EthanCharacter && PlayerCamera)
-    itemMesh->AddImpulse(PlayerCamera->GetForwardVector() * 2000);
+
+    if (EthanCharacter && EthanCharacter->GetPlayerCamera())
+    {
+        UCameraComponent* PlayerCamera = EthanCharacter->GetPlayerCamera();
+        itemMesh->AddImpulse(PlayerCamera->GetForwardVector() * ThrowForce);
+        UE_LOG(LogTemp, Warning, TEXT("Item thrown with force: %f"), ThrowForce);
+    }
 
     bIsPickedUp = false;
+    Holder = nullptr;
+    EthanCharacter->CurrentlyHeldItem = nullptr;
     UE_LOG(LogTemp, Warning, TEXT("Item dropped"));
 }
-
 
 void AItem::BeginPlay()
 {
     Super::BeginPlay();
+    OriginalScale = GetActorScale3D(); // Capture the item's initial scale
+    UE_LOG(LogTemp, Warning, TEXT("Original item scale set: %s"), *OriginalScale.ToString());
 }
 
 void AItem::Tick(float DeltaTime)

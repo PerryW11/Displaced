@@ -73,100 +73,48 @@ void AEthanCharacter::Look(const FInputActionValue& Value)
 
 void AEthanCharacter::Interact()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
+	UE_LOG(LogTemp, Warning, TEXT("Ethan Interact called"));
 
-    if (CurrentPlayerMode == EPlayerMode::Dialogue)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Advancing dialogue"));
-        DialogueInteract();
-        return;
-    }
+	if (CurrentPlayerMode == EPlayerMode::Dialogue)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Advancing dialogue"));
+		DialogueInteract();
+		return;
+	}
     
-    APlayerController* PlayerController = Cast<APlayerController>(GetController());
-    if (!PlayerController) return;
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController) return;
 
-    FVector CameraLocation;
-    FRotator CameraRotation;
-    PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-    FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
-    DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
+	FVector LineTraceEnd = CameraLocation + (CameraRotation.Vector() * InteractLineTraceDistance);
+	DrawDebugLine(GetWorld(), CameraLocation, LineTraceEnd, FColor::Green, false, 2.0f, 0, 2.0f);
 
-    FCollisionQueryParams TraceParams;
-    TraceParams.AddIgnoredActor(this);
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(this);
 
-    FHitResult Hit;
-    bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
+	FHitResult Hit;
+	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, LineTraceEnd, ECC_Visibility, TraceParams);
 
-    if (bHit && Hit.GetActor() && Hit.GetActor()->Implements<UInteractableInterface>())
-    {
-        AActor* HitActor = Hit.GetActor();
-        UE_LOG(LogTemp, Warning, TEXT("Object is interactable: %s"), *HitActor->GetName());
-        IInteractableInterface::Execute_Interact(HitActor, this);
+	if (bHit && Hit.GetActor() && Hit.GetActor()->Implements<UInteractableInterface>())
+	{
+		AActor* HitActor = Hit.GetActor();
+		UE_LOG(LogTemp, Warning, TEXT("Object is interactable: %s"), *HitActor->GetName());
+		IInteractableInterface::Execute_Interact(HitActor, this);
 
-        for (const auto& Tag : HitActor->Tags)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Actor has tag: %s"), *Tag.ToString());
-        }
-
-        if (HitActor->ActorHasTag(FName("Item")))
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Object has item tag"));
-            if (IInteractableInterface::Execute_BIsHeldItem(HitActor))
-            {
-                CurrentlyHeldItem = HitActor;
-                UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *HitActor->GetName());
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Item can't be picked up: %s"), *HitActor->GetName());
-            }
-        }
-        else if (HitActor->ActorHasTag(FName("NPC")))
-        {
-            ADialogueManager* DialogueManager = Cast<ADialogueManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADialogueManager::StaticClass()));
-            if (DialogueManager)
-            {
-                FString ConversationID = "test";
-                if (DialogueManager->HasConversationBeenCompleted(ConversationID))
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("Conversation %s already completed, skipping dialogue mode"), *ConversationID);
-                    return;
-                }
-            }
-
-            UE_LOG(LogTemp, Warning, TEXT("Interacting with NPC: %s"), *HitActor->GetName());
-            CurrentPlayerMode = EPlayerMode::Dialogue;
-            bIsInterpolatingCamera = true;
-            PlayerCamera->bUsePawnControlRotation = false;
-
-            TArray<UActorComponent*> HeadComponents = HitActor->GetComponentsByTag(USphereComponent::StaticClass(), FName("Head"));
-            if (HeadComponents.Num() > 0)
-            {
-                if (USphereComponent* HeadSphere = Cast<USphereComponent>(HeadComponents[0]))
-                {
-                    DialogueLookLocation = HeadSphere->GetComponentLocation();
-                    UE_LOG(LogTemp, Warning, TEXT("DialogueLookLocation set to Head sphere: %s"), *DialogueLookLocation.ToString());
-                }
-            }
-            else if (UCapsuleComponent* Capsule = HitActor->FindComponentByClass<UCapsuleComponent>())
-            {
-                DialogueLookLocation = Capsule->GetComponentLocation() + FVector(0.f, 0.f, Capsule->GetScaledCapsuleHalfHeight());
-                UE_LOG(LogTemp, Warning, TEXT("DialogueLookLocation set to capsule top: %s"), *DialogueLookLocation.ToString());
-            }
-            else
-            {
-                DialogueLookLocation = HitActor->GetActorLocation() + FVector(0.f, 0.f, 60.f);
-                UE_LOG(LogTemp, Warning, TEXT("DialogueLookLocation set to fallback: %s"), *DialogueLookLocation.ToString());
-            }
-        }
-    }
-    else if (CurrentlyHeldItem)
-    {
-        IInteractableInterface::Execute_Interact(CurrentlyHeldItem, this);
-        CurrentlyHeldItem = nullptr;
-        UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
-    }
+		for (const auto& Tag : HitActor->Tags)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Actor has tag: %s"), *Tag.ToString());
+		}
+	}
+	else if (CurrentlyHeldItem)
+	{
+		IInteractableInterface::Execute_Interact(CurrentlyHeldItem, this);
+		// CurrentlyHeldItem is cleared in Drop()
+		UE_LOG(LogTemp, Warning, TEXT("Dropped the held item"));
+	}
 }
 
 void AEthanCharacter::InterpolateCameraToTarget(float DeltaTime)

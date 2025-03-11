@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,94 +13,85 @@ class USphereComponent;
 UENUM(BlueprintType)
 enum class EPlayerMode : uint8
 {
-	Normal,
-	Dialogue
+    Normal,
+    Dialogue
 };
-
 
 UCLASS()
 class DISPLACED_API AEthanCharacter : public ACharacter
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-	AEthanCharacter();
+    AEthanCharacter();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-	//Base Gameplay Input
-	
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputMappingContext* EthanContext;
+    // Base Gameplay Input
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputMappingContext* EthanContext;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* MovementAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputAction* MovementAction;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* LookAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputAction* LookAction;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* InteractAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputAction* InteractAction;
 
-	void Move(const FInputActionValue& Value);
-	void Look(const FInputActionValue& Value);
-	void Interact();
+    void Move(const FInputActionValue& Value);
+    void Look(const FInputActionValue& Value);
+    void Interact();
 
-	//Dialogue Gameplay Input
-	
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputMappingContext* DialogueContext;
+    // Dialogue Gameplay Input
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputMappingContext* DialogueContext;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* DialogueLookAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputAction* DialogueLookAction;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* DialogueInteractAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    UInputAction* DialogueInteractAction;
 
-	void DialogueLook(const FInputActionValue& Value);
-	void DialogueInteract();
+    void DialogueLook(const FInputActionValue& Value);
+    void DialogueInteract();
 
-	FVector DialogueLookLocation;
-	FRotator DialogueLookDirection;
-	float MaxLookAngle;
+    FVector DialogueLookLocation;
+    FRotator DialogueLookDirection;
+    float MaxLookAngle;
 
-	UPROPERTY(EditAnywhere)
-	UCameraComponent* PlayerCamera;
+    UPROPERTY(EditAnywhere)
+    UCameraComponent* PlayerCamera;
 
-	UPROPERTY(EditAnywhere);
-	float InteractLineTraceDistance = 1000;
+    UPROPERTY(EditAnywhere)
+    float InteractLineTraceDistance = 1000;
 
-	void InterpolateCameraToTarget(float DeltaTime);
-	void EndDialogue();
+    void InterpolateCameraToTarget(float DeltaTime);
+    void EndDialogue();
 
-	UFUNCTION()
-	void DialogueMove(const FInputActionValue& Value);
-	
-	FVector2D LastLookInput;
-	
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+    UFUNCTION()
+    void DialogueMove(const FInputActionValue& Value);
+    
+    FVector2D LastLookInput;
+    
+public:    
+    virtual void Tick(float DeltaTime) override;
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    // Sphere component where items are attached when picked up
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    USphereComponent* HandComponent;
+    
+    // Reference to the currently held item
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    AActor* CurrentlyHeldItem;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	USphereComponent* HandComponent;
-	
-	// Variable to store the currently held item
-	AActor* CurrentlyHeldItem;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    EPlayerMode CurrentPlayerMode; 
 
-	EPlayerMode CurrentPlayerMode; 
+    UCameraComponent* GetPlayerCamera();
 
-	UCameraComponent* GetPlayerCamera();
-
-	bool bIsInterpolatingCamera;
-
-private:
-	
-
+    bool bIsInterpolatingCamera;
 };
